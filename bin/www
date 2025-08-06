@@ -3,15 +3,13 @@ const express = require('express');
 const path = require('path');
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env('PORT') || 3001;
 app.set('trust proxy', true)
 app.use(express.json()); // to parse JSON bodies
 
 // Serve static files (React build)
 app.use('/api/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
-// app.use(express.static(path.join(__dirname, '..', 'build')));
-// app.use(express.static(path.join('/app/flex/flex_ui', 'build')));
 console.log('Uploads directory is... ', path.join(__dirname, '../public/uploads'));
 
 // Add this middleware to log requests
@@ -24,11 +22,6 @@ app.use('/api/uploads', (req, res, next) => {
 app.get('/api/hello', (req, res) => {
   res.json({ message: 'Hello from Flex API!' });
 });
-
-// // Fallback for React SPA
-// app.get('*', (req, res) => {
-//   res.sendFile(path.join('/app/flex/flex_ui', 'build', 'index.html'));
-// });
 
 // Mount the routers at /api/...
 const applicationRouter = require('../routes/application');
