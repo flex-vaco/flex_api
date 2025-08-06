@@ -1,103 +1,63 @@
-#!/usr/bin/env node
-
-/**
- * Module dependencies.
- */
-
-var app = require('../app');
-var debug = require('debug')('flex-api:');
-// var http = require('http');
-const https = require('https');
-const fs = require('fs');
+// #!/usr/bin/env node
+const express = require('express');
 const path = require('path');
 
-// Load SSL certificate and key
-const sslKey = fs.readFileSync(path.join(__dirname, 'ssl/.key'));
-const sslCert = fs.readFileSync(path.join(__dirname, 'ssl/.cert'));
+const app = express();
+const PORT = 3001;
+app.set('trust proxy', true)
+app.use(express.json()); // to parse JSON bodies
 
-/**
- * Get port from environment and store in Express.
- */
+// Serve static files (React build)
+app.use('/api/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
-const PORT = normalizePort(process.env.PORT || 443);
-// app.set('port', port);
+// app.use(express.static(path.join(__dirname, '..', 'build')));
+// app.use(express.static(path.join('/app/flex/flex_ui', 'build')));
+console.log('Uploads directory is... ', path.join(__dirname, '../public/uploads'));
 
-/**
- * Create HTTP .
- */
-
-// var  = http.createServer(app);
-
-// Create HTTPS 
-const httpsServer = https.createServer({ key: sslKey, cert: sslCert }, app);
-
-// Start HTTPS  and listen on provided port
-httpsServer.listen(PORT, () => {
-  console.log(`HTTPS  running at https://flex.highspring.com:${PORT}`);
+// Add this middleware to log requests
+app.use('/api/uploads', (req, res, next) => {
+    console.log('Upload request:', req.path);
+    next();
 });
 
+// Example API route
+app.get('/api/hello', (req, res) => {
+  res.json({ message: 'Hello from Flex API!' });
+});
 
-// .listen(port);
-httpsServer.on('error', onError);
-httpsServer.on('listening', onListening);
+// // Fallback for React SPA
+// app.get('*', (req, res) => {
+//   res.sendFile(path.join('/app/flex/flex_ui', 'build', 'index.html'));
+// });
 
+// Mount the routers at /api/...
+const applicationRouter = require('../routes/application');
+app.use('/api/application', applicationRouter);
+const categoriesRouter = require('../routes/categories');
+app.use('/api/categories', categoriesRouter);
+const clientsRouter = require('../routes/clients');
+app.use('/api/clients', clientsRouter);
+const employeesRouter = require('../routes/employees');
+app.use('/api/employees', employeesRouter);
+const hiringsRouter = require('../routes/hirings');
+app.use('/api/hirings', hiringsRouter);
+const indexRouter = require('../routes/index');
+app.use('/api/index', indexRouter);
+const officeLocationsRouter = require('../routes/officeLocations');
+app.use('/api/officeLocations', officeLocationsRouter);
+const projectAllocationsRouter = require('../routes/projectAllocations');
+app.use('/api/projectAllocations', projectAllocationsRouter);
+const projectsRouter = require('../routes/projects');
+app.use('/api/projects', projectsRouter);
+const projectUtilizationsRouter = require('../routes/projectAllocations');
+app.use('/api/projectAllocations', projectUtilizationsRouter);
+const reportsRouter = require('../routes/reports');
+app.use('/api/reports', reportsRouter);
+const timesheetsRouter = require('../routes/timesheets');
+app.use('/api/timesheets', timesheetsRouter);
+const usersRouter = require('../routes/users');
+app.use('/api/users', usersRouter);
 
-/**
- * Normalize a port into a number, string, or false.
- */
-
-function normalizePort(val) {
-  var port = parseInt(val, 10);
-
-  if (isNaN(port)) {
-    // named pipe
-    return val;
-  }
-
-  if (port >= 0) {
-    // port number
-    return port;
-  }
-
-  return false;
-}
-
-/**
- * Event listener for HTTP server "error" event.
- */
-
-function onError(error) {
-  if (error.syscall !== 'listen') {
-    throw error;
-  }
-
-  var bind = typeof port === 'string'
-    ? 'Pipe ' + port
-    : 'Port ' + port;
-
-  // handle specific listen errors with friendly messages
-  switch (error.code) {
-    case 'EACCES':
-      console.error(bind + ' requires elevated privileges');
-      process.exit(1);
-      break;
-    case 'EADDRINUSE':
-      console.error(bind + ' is already in use');
-      process.exit(1);
-      break;
-    default:
-      throw error;
-  }
-}
-
-/**
- * Event listener for HTTP server "listening" event.
- */
-
-function onListening() {
-  var addr = httpsServer.address();
-  var bind = typeof addr === 'string'
-    ? 'pipe ' + addr
-    : 'port ' + addr.port;
-  debug('Listening on ' + bind);
-}
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
