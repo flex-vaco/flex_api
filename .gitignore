@@ -1,3 +1,8 @@
+#server specific Config's
+.env
+bin/www
+ssl/
+
 # Logs
 logs
 *.log
