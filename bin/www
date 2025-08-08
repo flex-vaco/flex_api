@@ -7,22 +7,25 @@ const PORT = process.env.PORT || 3001;
 app.set('trust proxy', true)
 app.use(express.json()); // to parse JSON bodies
 
-// Serve static files (React build)
+if (process.env.ENV === "DEVELOPMENT"){
+  const cors = require('cors');
+  app.use(function(req, res, next) {
+      res.header("Access-Control-Allow-Origin", "*"); // update to match the domain you will make the request from
+      res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+      next();
+  });    
+  app.use(cors());
+}
+
+// Serve static files
 app.use('/api/uploads', express.static(path.join(__dirname, '../public/uploads')));
+// console.log('Uploads directory: ', path.join(__dirname, '../public/uploads'));
 
-console.log('Uploads directory: ', path.join(__dirname, '../public/uploads'));
 
-// Add this middleware to log requests
-app.use('/api/uploads', (req, res, next) => {
-    console.log('Upload request:', req.path);
-    next();
-});
-
-// Example API route
+// Health check API route
 app.get('/api/hello', (req, res) => {
   const currentTime = new Date();
   const today = currentTime.toLocaleString('en-UK'); // Example for US English locale
-
   res.json({ message: 'This is Hello from Flex API!', date: today });
 });
 
@@ -61,11 +64,11 @@ app.use('/api/index', indexRouter);
 const officeLocationsRouter = require('../routes/officeLocations');
 app.use('/api/officeLocation', officeLocationsRouter);
 const projectAllocationsRouter = require('../routes/projectAllocations');
-app.use('/api/projectAllocations', projectAllocationsRouter);
+app.use('/api/empPrjAloc', projectAllocationsRouter);
 const projectsRouter = require('../routes/projects');
 app.use('/api/projects', projectsRouter);
-const projectUtilizationsRouter = require('../routes/projectAllocations');
-app.use('/api/projectAllocations', projectUtilizationsRouter);
+const projectUtilizationsRouter = require('../routes/projecUtilizations');
+app.use('/api/empPrjUtili', projectUtilizationsRouter);
 const reportsRouter = require('../routes/reports');
 app.use('/api/reports', reportsRouter);
 const timesheetsRouter = require('../routes/timesheets');
