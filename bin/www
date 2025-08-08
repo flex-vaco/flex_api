@@ -30,10 +30,15 @@ app.get('/api/hello', (req, res) => {
 });
 
 app.get('/api/talk_to_ai', async (req, res) => {
+
+  // *********** *********** *********** *********** *********** *********** ***********
+  // IMPORTANT TBD - Move this route to application and use proper userID of a logged in user 
+  // *********** *********** *********** *********** *********** *********** ***********
   const userQuery = req.query.userQuery
+  const userID = "raj_for_session_id" //need to change this
   console.log("Req query... ", userQuery)
     try {
-        const apiUrl = "http://13.57.185.244:5603/resume_query?query="+userQuery; // Gen AI API endpoint
+        const apiUrl = "http://13.57.185.244:5603/resume_query?query="+userQuery+"&user_id="+userID; // Gen AI API endpoint
         const response = await fetch(apiUrl);
 
         if (!response.ok) {
