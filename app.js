@@ -52,6 +52,8 @@ app.use('/hirings', hiringsRouter);
 app.use('/categories', categoriesRouter);
 app.use('/officeLocation', officeLocationRouter);
 
+const genAIRouter = require('../routes/genAI');
+app.use('/api/genAI', genAIRouter);
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));
