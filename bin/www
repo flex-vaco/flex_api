@@ -56,6 +56,9 @@ app.use('/api/timesheets', timesheetsRouter);
 const usersRouter = require('../routes/users');
 app.use('/api/users', usersRouter);
 
+const lineOfBusinessRouter = require('../routes/lineOfBusiness');
+app.use('/api/lineOfBusiness', lineOfBusinessRouter);
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
