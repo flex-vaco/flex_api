@@ -52,7 +52,7 @@ const findById = (req, res) => {
                       'first_name', e.first_name,
                       'last_name', e.last_name,
                       'emp_email', e.email,
-                      'rate_per_hour', e.rate_per_hour,
+                      'cost_per_hour', e.cost_per_hour,
                       'designation', e.designation,
                       'manager_email', e.manager_email,
                       'manager_name', e.manager_name,
