@@ -7,7 +7,7 @@ const findAll = (req, res) => {
     const msg = `User role '${req.user.role}' does not have privileges on this action`;
     return res.status(404).send({error: true, message: msg});
   }
-  let query =`SELECT * FROM ${serviceLineTable}`;
+  let query =`SELECT sl.*, lb.name as line_of_business_name FROM ${serviceLineTable} sl LEFT JOIN line_of_business lb ON sl.line_of_business_id = lb.id`;
   
   sql.query(query, (err, rows) => {
     if (err) {
@@ -25,8 +25,8 @@ const findById = (req, res) => {
   }
   const serviceLineId = req.params.id;
   if (serviceLineId) {
-    const query = `SELECT * FROM ${serviceLineTable} WHERE id = '${serviceLineId}'`;
-    sql.query(query, (err, rows) => {
+    const query = `SELECT sl.*, lb.name as line_of_business_name FROM ${serviceLineTable} sl LEFT JOIN line_of_business lb ON sl.line_of_business_id = lb.id WHERE sl.id = ?`;
+    sql.query(query, [serviceLineId], (err, rows) => {
       if (err) {
         console.log("error: ", err);
         return res.status(500).send(`There was a problem finding the Service Line. ${err}`);
@@ -36,6 +36,26 @@ const findById = (req, res) => {
     });
   } else {
     return res.status(500).send("Service Line ID required");
+  }
+};
+
+const findByLineOfBusiness = (req, res) => {
+  if (!userACL.hasServiceLineReadAccess(req.user.role)) {
+    const msg = `User role '${req.user.role}' does not have privileges on this action`;
+    return res.status(404).send({error: true, message: msg});
+  }
+  const lineOfBusinessId = req.params.lineOfBusinessId;
+  if (lineOfBusinessId) {
+    const query = `SELECT * FROM ${serviceLineTable} WHERE line_of_business_id = ?`;
+    sql.query(query, [lineOfBusinessId], (err, rows) => {
+      if (err) {
+        console.log("error: ", err);
+        return res.status(500).send(`There was a problem getting service lines for line of business. ${err}`);
+      }
+      return res.status(200).send({serviceLines: rows, user: req.user});
+    });
+  } else {
+    return res.status(500).send("Line of Business ID required");
   }
 };
 
@@ -115,6 +135,7 @@ const erase = (req, res) => {
 module.exports = {
   findAll,
   findById,
+  findByLineOfBusiness,
   create,
   update,
   erase

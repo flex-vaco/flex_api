@@ -61,6 +61,8 @@ const serviceLineRouter = require('../routes/serviceLine');
 app.use('/api/serviceLine', serviceLineRouter);
 const capabilityAreaRouter = require('../routes/capabilityArea');
 app.use('/api/capabilityArea', capabilityAreaRouter);
+const workRequestRouter = require('../routes/workRequest');
+app.use('/api/workRequest', workRequestRouter);
 
 
 app.listen(PORT, () => {

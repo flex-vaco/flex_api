@@ -9,6 +9,7 @@ router.use(bodyParser.urlencoded({ extended: true }));
 router.get("/", verifyToken, CapabilityArea.findAll);
 router.get("/:id", verifyToken, CapabilityArea.findById);
 router.get("/serviceLine/:serviceLineId", verifyToken, CapabilityArea.findByServiceLine);
+router.get("/lineOfBusiness/:lineOfBusinessId", verifyToken, CapabilityArea.findByLineOfBusiness);
 router.post("/add", verifyToken, CapabilityArea.create);
 router.post("/update/:id", verifyToken, CapabilityArea.update);
 router.get("/delete/:id", verifyToken, CapabilityArea.erase);

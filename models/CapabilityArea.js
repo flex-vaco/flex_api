@@ -7,8 +7,9 @@ const findAll = (req, res) => {
     const msg = `User role '${req.user.role}' does not have privileges on this action`;
     return res.status(404).send({error: true, message: msg});
   }
-  let query =`SELECT ca.*, sl.name as service_line_name FROM ${capabilityAreaTable} ca 
-               LEFT JOIN service_line sl ON ca.service_line_id = sl.id`;
+  let query =`SELECT ca.*, sl.name as service_line_name, lb.name as line_of_business_name FROM ${capabilityAreaTable} ca 
+               LEFT JOIN service_line sl ON ca.service_line_id = sl.id
+               LEFT JOIN line_of_business lb ON ca.line_of_business_id = lb.id`;
   
   sql.query(query, (err, rows) => {
     if (err) {
@@ -26,10 +27,11 @@ const findById = (req, res) => {
   }
   const capabilityAreaId = req.params.id;
   if (capabilityAreaId) {
-    const query = `SELECT ca.*, sl.name as service_line_name FROM ${capabilityAreaTable} ca 
+    const query = `SELECT ca.*, sl.name as service_line_name, lb.name as line_of_business_name FROM ${capabilityAreaTable} ca 
                    LEFT JOIN service_line sl ON ca.service_line_id = sl.id 
-                   WHERE ca.id = '${capabilityAreaId}'`;
-    sql.query(query, (err, rows) => {
+                   LEFT JOIN line_of_business lb ON ca.line_of_business_id = lb.id
+                   WHERE ca.id = ?`;
+    sql.query(query, [capabilityAreaId], (err, rows) => {
       if (err) {
         console.log("error: ", err);
         return res.status(500).send(`There was a problem finding the Capability Area. ${err}`);
@@ -59,6 +61,26 @@ const findByServiceLine = (req, res) => {
     });
   } else {
     return res.status(500).send("Service Line ID required");
+  }
+};
+
+const findByLineOfBusiness = (req, res) => {
+  if (!userACL.hasCapabilityAreaReadAccess(req.user.role)) {
+    const msg = `User role '${req.user.role}' does not have privileges on this action`;
+    return res.status(404).send({error: true, message: msg});
+  }
+  const lineOfBusinessId = req.params.lineOfBusinessId;
+  if (lineOfBusinessId) {
+    const query = `SELECT * FROM ${capabilityAreaTable} WHERE line_of_business_id = ?`;
+    sql.query(query, [lineOfBusinessId], (err, rows) => {
+      if (err) {
+        console.log("error: ", err);
+        return res.status(500).send(`There was a problem getting capability areas for line of business. ${err}`);
+      }
+      return res.status(200).send({capabilityAreas: rows, user: req.user});
+    });
+  } else {
+    return res.status(500).send("Line of Business ID required");
   }
 };
 
@@ -139,6 +161,7 @@ module.exports = {
   findAll,
   findById,
   findByServiceLine,
+  findByLineOfBusiness,
   create,
   update,
   erase

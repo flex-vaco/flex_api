@@ -17,6 +17,10 @@ const timesheetsRouter = require('./routes/timesheets');
 const hiringsRouter = require('./routes/hirings');
 const categoriesRouter = require('./routes/categories');
 const officeLocationRouter = require('./routes/officeLocations');
+const lineOfBusinessRouter = require('./routes/lineOfBusiness');
+const serviceLineRouter = require('./routes/serviceLine');
+const capabilityAreaRouter = require('./routes/capabilityArea');
+const workRequestRouter = require('./routes/workRequest');
 const cors = require('cors');
 const app = express();
 
@@ -51,6 +55,10 @@ app.use('/timesheets', timesheetsRouter);
 app.use('/hirings', hiringsRouter);
 app.use('/categories', categoriesRouter);
 app.use('/officeLocation', officeLocationRouter);
+app.use('/lineOfBusiness', lineOfBusinessRouter);
+app.use('/serviceLine', serviceLineRouter);
+app.use('/capabilityArea', capabilityAreaRouter);
+app.use('/workRequest', workRequestRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
