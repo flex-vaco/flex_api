@@ -6,12 +6,31 @@ const APP_EMAIL = require("../lib/email.js");
 
 const usersTable = "users";
 const APP_CONSTANTS = require('../lib/appConstants.js');
+const userACL = require('../lib/userACL.js');
 
 const findAll = (req, res) => {
-  let query =`SELECT * FROM ${usersTable}`;
-  if (req.query.first_name) {
-    query += ` WHERE first_name LIKE '%${req.query.first_name}%'`;
+  if (!userACL.hasUserReadAccess(req.user.role)) {
+    const msg = `User role '${req.user.role}' does not have privileges on this action`;
+    return res.status(404).send({error: true, message: msg});
   }
+  
+  let query = `SELECT u.*, lb.name as line_of_business_name FROM ${usersTable} u LEFT JOIN line_of_business lb ON u.line_of_business_id = lb.id`;
+  let whereConditions = [];
+  
+  if (req.user.role !== 'administrator') {
+    whereConditions.push(`u.line_of_business_id = ${req.user.line_of_business_id}`);
+  }
+  
+  if (req.query.first_name) {
+    whereConditions.push(`u.first_name LIKE '%${req.query.first_name}%'`);
+  }
+  
+  if (whereConditions.length > 0) {
+    query += ` WHERE ${whereConditions.join(' AND ')}`;
+  }
+  
+  query += ` ORDER BY u.first_name, u.last_name`;
+  
   sql.query(query, (err, rows) => {
     if (err) {
       console.log("error: ", err);
@@ -22,6 +41,11 @@ const findAll = (req, res) => {
 };
 
 const findByEmail = (req, res) => {
+  if (!userACL.hasUserReadAccess(req.user.role)) {
+    const msg = `User role '${req.user.role}' does not have privileges on this action`;
+    return res.status(404).send({error: true, message: msg});
+  }
+  
   const emailId = req.params.email;
   if (emailId) {
     const query = `SELECT * FROM ${usersTable} WHERE email = '${emailId}'`;
@@ -38,15 +62,32 @@ const findByEmail = (req, res) => {
 };
 
 const findById = (req, res) => {
+  if (!userACL.hasUserReadAccess(req.user.role)) {
+    const msg = `User role '${req.user.role}' does not have privileges on this action`;
+    return res.status(404).send({error: true, message: msg});
+  }
+  
   const userId = req.params.user_id;
   
   if (userId) {
-    const query = `SELECT * FROM ${usersTable} WHERE user_id = '${userId}'`;
-    sql.query(query, (err, rows) => {
+    let query = `SELECT u.*, lb.name as line_of_business_name FROM ${usersTable} u LEFT JOIN line_of_business lb ON u.line_of_business_id = lb.id WHERE u.user_id = ?`;
+    let params = [userId];
+    
+    if (req.user.role !== 'administrator') {
+      query += ` AND u.line_of_business_id = ?`;
+      params.push(req.user.line_of_business_id);
+    }
+    
+    sql.query(query, params, (err, rows) => {
       if (err) {
         console.log("error: ", err);
         return res.status(500).send(`There was a problem finding the User. ${err}`);
       }
+      
+      if (rows.length === 0) {
+        return res.status(404).send("User not found or access denied");
+      }
+      
       if (rows[0]?.role === APP_CONSTANTS.USER_ROLES.PRODUCER) {
         const producerClientsQry = `SELECT * FROM producer_clients WHERE producer_id = ${userId}`;
         sql.query(producerClientsQry, (err, cl_ids) => {
@@ -68,8 +109,17 @@ const findById = (req, res) => {
 };
 
 const getUserRoles = (req, res) => {
-  let query ="SELECT * FROM user_roles";
-
+  let query = "SELECT * FROM user_roles";
+  let whereConditions = [];
+  if (req.user.role !== 'administrator') {
+    whereConditions.push(`line_of_business_id = ${req.user.line_of_business_id}`);
+  }
+  if (whereConditions.length > 0) {
+    query += ` WHERE ${whereConditions.join(' AND ')}`;
+  }
+  
+  query += ` ORDER BY role`;
+  
   sql.query(query, (err, rows) => {
     if (err) {
       console.log("error: ", err);
@@ -80,10 +130,24 @@ const getUserRoles = (req, res) => {
 };
 
 const create = (req, res) => {
+    if (!userACL.hasUserCreateAccess(req.user.role)) {
+        const msg = `User role '${req.user.role}' does not have privileges on this action`;
+        return res.status(404).send({error: true, message: msg});
+    }
+    
     const newUser = req.body;
     if (!newUser.email || !newUser.password) {
         res.status(500).send("Email ID and passord are neeeded");
         return;
+    }
+    
+    if (req.user.role !== 'administrator') {
+        if (!newUser.line_of_business_id) {
+            return res.status(400).send("Line of business is required for non administrator users");
+        }
+        if (newUser.line_of_business_id != req.user.line_of_business_id) {
+            return res.status(403).send("Non administrator users can only create users in their own line of business");
+        }
     }
     const chkUsrQuery = `SELECT * FROM ${usersTable} WHERE email = '${newUser.email}'`;
     sql.query(chkUsrQuery, (err, rows) => {
@@ -175,11 +239,44 @@ const signIn = (req, res) => {
 }
 
 const update = (req, res) => {
+  if (!userACL.hasUserUpdateAccess(req.user.role)) {
+    const msg = `User role '${req.user.role}' does not have privileges on this action`;
+    return res.status(404).send({error: true, message: msg});
+  }
+  
   const { user_id } = req.params;
   if(!user_id){
     res.status(500).send('User ID is Required');
   }
   const updatedUser = req.body;
+  
+  if (req.user.role !== 'administrator') {
+    const checkQuery = `SELECT line_of_business_id FROM ${usersTable} WHERE user_id = ?`;
+    sql.query(checkQuery, [user_id], (err, rows) => {
+      if (err) {
+        console.log("error: ", err);
+        return res.status(500).send(`Problem while checking user access. ${err}`);
+      }
+      
+      if (rows.length === 0) {
+        return res.status(404).send("User not found");
+      }
+      
+      if (rows[0].line_of_business_id != req.user.line_of_business_id) {
+        return res.status(403).send("Non administrator users can only update users in their own line of business");
+      }
+      
+      if (updatedUser.line_of_business_id && updatedUser.line_of_business_id != req.user.line_of_business_id) {
+        return res.status(403).send("Non administrator users cannot change user's line of business");
+      }
+      
+      proceedWithUpdate();
+    });
+  } else {
+    proceedWithUpdate();
+  }
+  
+  function proceedWithUpdate() {
   let producerClients = [];
   let producerClientQry = "";
   if ((updatedUser.role === APP_CONSTANTS.USER_ROLES.PRODUCER) && updatedUser.client_ids) {
@@ -232,9 +329,15 @@ const update = (req, res) => {
       }
     }
   });
+  }
 };
 
 const resetPassword = (req, res) => {
+  if (!userACL.hasUserUpdateAccess(req.user.role)) {
+    const msg = `User role '${req.user.role}' does not have privileges on this action`;
+    return res.status(404).send({error: true, message: msg});
+  }
+  
   const { user_id } = req.params;
   if(!user_id){
     res.status(500).send('User ID is Required');
@@ -266,10 +369,23 @@ const resetPassword = (req, res) => {
 };
 
 const getUserByRole = (req, res) => {
+  if (!userACL.hasUserReadAccess(req.user.role)) {
+    const msg = `User role '${req.user.role}' does not have privileges on this action`;
+    return res.status(404).send({error: true, message: msg});
+  }
+  
   const role = req.body.role;
   if (role) {
-    const query = `SELECT * FROM ${usersTable} WHERE role = '${role}'`;
-    sql.query(query, (err, rows) => {
+    let query = `SELECT * FROM ${usersTable} WHERE role = ?`;
+    let params = [role];
+    
+    // Add line of business filter for non-administrator users
+    if (req.user.role !== 'administrator') {
+      query += ` AND line_of_business_id = ?`;
+      params.push(req.user.line_of_business_id);
+    }
+    
+    sql.query(query, params, (err, rows) => {
       if (err) {
         console.log("error: ", err);
         return res.status(500).send(`There was a problem finding the Users. ${err}`);
@@ -281,25 +397,76 @@ const getUserByRole = (req, res) => {
   }
 }
 
+const getManagersByLineOfBusiness = (req, res) => {
+  if (!userACL.hasUserReadAccess(req.user.role)) {
+    const msg = `User role '${req.user.role}' does not have privileges on this action`;
+    return res.status(404).send({error: true, message: msg});
+  }
+  
+  const { line_of_business_id } = req.body;
+  if (!line_of_business_id) {
+    return res.status(500).send("Line of Business ID is required");
+  }
+  
+  const query = `SELECT * FROM ${usersTable} WHERE (role = 'manager' OR role = 'offshorelead') AND line_of_business_id = ?`;
+  sql.query(query, [line_of_business_id], (err, rows) => {
+    if (err) {
+      console.log("error: ", err);
+      return res.status(500).send(`There was a problem finding the Managers. ${err}`);
+    }
+    return res.status(200).send({users: rows});
+  });
+}
+
 const erase = (req, res) => {
+  if (!userACL.hasUserDeleteAccess(req.user.role)) {
+    const msg = `User role '${req.user.role}' does not have privileges on this action`;
+    return res.status(404).send({error: true, message: msg});
+  }
+  
   const { user_id } = req.params;
   if(!user_id){
     res.status(500).send('User ID is Required');
   }
-  const deleteQuery = `DELETE FROM ${usersTable} WHERE user_id = ?`;
-  sql.query(deleteQuery,[user_id], (err, succeess) => {
-    if (err) {
-      console.log("error: ", err);
-      res.status(500).send(`Problem while Deleting the ${usersTable} with ID: ${user_id}. ${err}`);
-    } else {
-      if (succeess.affectedRows == 1){
-        console.log(`${usersTable} DELETED:` , succeess)
-        res.status(200).send(`Deleted row from ${usersTable} with ID: ${user_id}`);
-      } else {
-        res.status(404).send(`Record not found with User Details ID: ${user_id}`);
+  
+  if (req.user.role !== 'administrator') {
+    const checkQuery = `SELECT line_of_business_id FROM ${usersTable} WHERE user_id = ?`;
+    sql.query(checkQuery, [user_id], (err, rows) => {
+      if (err) {
+        console.log("error: ", err);
+        return res.status(500).send(`Problem while checking user access. ${err}`);
       }
-    }
-  });
+      
+      if (rows.length === 0) {
+        return res.status(404).send("User not found");
+      }
+      
+      if (rows[0].line_of_business_id != req.user.line_of_business_id) {
+        return res.status(403).send("Non administrator users can only delete users in their own line of business");
+      }
+      
+      proceedWithDelete();
+    });
+  } else {
+    proceedWithDelete();
+  }
+  
+  function proceedWithDelete() {
+    const deleteQuery = `DELETE FROM ${usersTable} WHERE user_id = ?`;
+    sql.query(deleteQuery,[user_id], (err, succeess) => {
+      if (err) {
+        console.log("error: ", err);
+        res.status(500).send(`Problem while Deleting the ${usersTable} with ID: ${user_id}. ${err}`);
+      } else {
+        if (succeess.affectedRows == 1){
+          console.log(`${usersTable} DELETED:` , succeess)
+          res.status(200).send(`Deleted row from ${usersTable} with ID: ${user_id}`);
+        } else {
+          res.status(404).send(`Record not found with User Details ID: ${user_id}`);
+        }
+      }
+    });
+  }
 };
 
 const forgotPassword = (req, res) => {
@@ -325,8 +492,7 @@ const forgotPassword = (req, res) => {
         resetLink: `${process.env.VACO_FLEX_UI}/updatePassword?token=${jwToken}`,
         userName: `${user.first_name} ${user.last_name}`
       };
-      //APP_EMAIL.sendEmail('passwordResetRequest', values,subject = `Password Reset Request`, email);
-
+      
       return res.status(200).json({ message: "Token Generated!", token: jwToken });
     }
   });
@@ -378,6 +544,26 @@ const resetPasswordRequest = (req, res) => {
   }
 }
 
+const findByLineOfBusiness = (req, res) => {
+  if (!userACL.hasUserReadAccess(req.user.role)) {
+    const msg = `User role '${req.user.role}' does not have privileges on this action`;
+    return res.status(404).send({error: true, message: msg});
+  }
+  const lineOfBusinessId = req.params.lineOfBusinessId;
+  if (lineOfBusinessId) {
+    const query = `SELECT u.*, lb.name as line_of_business_name FROM ${usersTable} u LEFT JOIN line_of_business lb ON u.line_of_business_id = lb.id WHERE u.line_of_business_id = ? ORDER BY u.first_name, u.last_name`;
+    sql.query(query, [lineOfBusinessId], (err, rows) => {
+      if (err) {
+        console.log("error: ", err);
+        return res.status(500).send(`There was a problem getting users for line of business. ${err}`);
+      }
+      return res.status(200).send({users: rows, user: req.user});
+    });
+  } else {
+    return res.status(500).send("Line of Business ID required");
+  }
+};
+
 module.exports = {
   findAll,
   findById,
@@ -389,6 +575,8 @@ module.exports = {
   getUserRoles,
   resetPassword,
   getUserByRole,
+  getManagersByLineOfBusiness,
+  findByLineOfBusiness,
   forgotPassword,
   resetPasswordRequest,
 }

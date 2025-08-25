@@ -12,11 +12,24 @@ const findAll = (req, res) => { // filters by name if params are given
   }
 
   const managerEmail = req.query?.manager_email;
+  const userRole = req.user.role;
+  const userLineOfBusinessId = req.user.line_of_business_id;
  
-  let query =`SELECT * FROM ${empTable}`;
+  let query = `SELECT * FROM ${empTable}`;
+  let whereConditions = [];
+  
   if (managerEmail) {
-    query += ` WHERE manager_email = '${managerEmail}'`;
+    whereConditions.push(`manager_email = '${managerEmail}'`);
   }
+  
+  if (userRole !== 'administrator' && userLineOfBusinessId) {
+    whereConditions.push(`line_of_business_id = ${userLineOfBusinessId}`);
+  }
+  
+  if (whereConditions.length > 0) {
+    query += ` WHERE ${whereConditions.join(' AND ')}`;
+  }
+  
   sql.query(query, (err, rows) => {
     if (err) {
       console.log("error: ", err);
@@ -58,6 +71,8 @@ const search = (req, res) => {
     const empExperience = req.query.exp ?? null;
     const empRole = req.query.role ?? null;
     const empAvailability = req.query.availability ?? null;
+    const userRole = req.user.role;
+    const userLineOfBusinessId = req.user.line_of_business_id;
     
     let query = `SELECT emp.*, 
                   COALESCE(SUM(ea.hours_per_day) * 5, 0) AS alc_per_week
@@ -66,6 +81,11 @@ const search = (req, res) => {
                   ON ea.emp_id = emp.emp_id 
                   AND CURDATE() BETWEEN ea.start_date AND ea.end_date     
                   WHERE 1 = 1`;
+    
+    // Filter by line of business if user is not administrator
+    if (userRole !== 'administrator' && userLineOfBusinessId) {
+      query += ` AND emp.line_of_business_id = ${userLineOfBusinessId}`;
+    }
 
     if (empLocation) {
       query = query + ` AND emp.office_location_city LIKE '${empLocation}%'`;

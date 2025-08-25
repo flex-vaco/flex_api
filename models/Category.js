@@ -12,7 +12,6 @@ const findAll = (req, res) => {
     }
     try {
         let query =`SELECT * FROM ${category}`;
-        console.log("error: ", query);
         sql.query(query, (err, rows) => {
             if (err) {
             console.log("error: ", err);

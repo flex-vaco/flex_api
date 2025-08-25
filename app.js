@@ -21,6 +21,7 @@ const lineOfBusinessRouter = require('./routes/lineOfBusiness');
 const serviceLineRouter = require('./routes/serviceLine');
 const capabilityAreaRouter = require('./routes/capabilityArea');
 const workRequestRouter = require('./routes/workRequest');
+const userRolesRouter = require('./routes/userRoles');
 const cors = require('cors');
 const app = express();
 
@@ -59,6 +60,7 @@ app.use('/lineOfBusiness', lineOfBusinessRouter);
 app.use('/serviceLine', serviceLineRouter);
 app.use('/capabilityArea', capabilityAreaRouter);
 app.use('/workRequest', workRequestRouter);
+app.use('/userRoles', userRolesRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

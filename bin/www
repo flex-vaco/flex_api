@@ -63,6 +63,8 @@ const capabilityAreaRouter = require('../routes/capabilityArea');
 app.use('/api/capabilityArea', capabilityAreaRouter);
 const workRequestRouter = require('../routes/workRequest');
 app.use('/api/workRequest', workRequestRouter);
+const userRolesRouter = require('../routes/userRoles');
+app.use('/api/userRoles', userRolesRouter);
 
 
 app.listen(PORT, () => {

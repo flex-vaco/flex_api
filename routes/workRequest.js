@@ -14,5 +14,6 @@ router.post("/add", verifyToken, WorkRequest.create);
 router.post("/update/:id", verifyToken, WorkRequest.update);
 router.get("/delete/:id", verifyToken, WorkRequest.erase);
 router.post("/resourcesByCapabilityAreas", verifyToken, WorkRequest.getResourcesByCapabilityAreas);
+router.get("/capabilityAreasByLineOfBusiness/:lineOfBusinessId", verifyToken, WorkRequest.getCapabilityAreasByLineOfBusiness);
 
 module.exports = router; 

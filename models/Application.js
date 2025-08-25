@@ -7,7 +7,6 @@ const APP_EMAIL = require("../lib/email.js");
 
 const getCategories = (req, res) => {
   let query =`SELECT * FROM ${categoryTable}`;
-  console.log("error: ", query);
   sql.query(query, (err, rows) => {
     if (err) {
       console.log("error: ", err);

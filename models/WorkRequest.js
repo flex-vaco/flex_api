@@ -13,6 +13,7 @@ const findAll = (req, res) => {
   let query = `
     SELECT wr.*, 
            sl.name as service_line_name,
+           lb.name as line_of_business_name,
            pd.project_name,
            pd.project_location,
            u.first_name, u.last_name,
@@ -20,6 +21,7 @@ const findAll = (req, res) => {
            GROUP_CONCAT(DISTINCT CONCAT(ed.first_name, ' ', ed.last_name)) as assigned_resources
     FROM ${workRequestTable} wr
     LEFT JOIN service_line sl ON wr.service_line_id = sl.id
+    LEFT JOIN line_of_business lb ON wr.line_of_business_id = lb.id
     LEFT JOIN project_details pd ON wr.project_id = pd.project_id
     LEFT JOIN users u ON wr.submitted_by = u.user_id
     LEFT JOIN ${workRequestCapabilityAreasTable} wrca ON wr.id = wrca.work_request_id
@@ -29,6 +31,16 @@ const findAll = (req, res) => {
     GROUP BY wr.id
     ORDER BY wr.created_at DESC
   `;
+  
+  // Add line of business filter for non-administrator users
+  let whereConditions = [];
+  if (req.user.role !== 'administrator') {
+    whereConditions.push(`wr.line_of_business_id = ${req.user.line_of_business_id}`);
+  }
+  
+  if (whereConditions.length > 0) {
+    query = query.replace('GROUP BY wr.id', `WHERE ${whereConditions.join(' AND ')} GROUP BY wr.id`);
+  }
   
   sql.query(query, (err, rows) => {
     if (err) {
@@ -47,20 +59,30 @@ const findById = (req, res) => {
   
   const workRequestId = req.params.id;
   if (workRequestId) {
-    const query = `
+    let query = `
       SELECT wr.*, 
              sl.name as service_line_name,
+             lb.name as line_of_business_name,
              pd.project_name,
              pd.project_location,
              u.first_name, u.last_name
       FROM ${workRequestTable} wr
       LEFT JOIN service_line sl ON wr.service_line_id = sl.id
+      LEFT JOIN line_of_business lb ON wr.line_of_business_id = lb.id
       LEFT JOIN project_details pd ON wr.project_id = pd.project_id
       LEFT JOIN users u ON wr.submitted_by = u.user_id
       WHERE wr.id = ?
     `;
     
-    sql.query(query, [workRequestId], (err, rows) => {
+    let params = [workRequestId];
+    
+    // Add line of business filter for non-administrator users
+    if (req.user.role !== 'administrator') {
+      query += ` AND wr.line_of_business_id = ?`;
+      params.push(req.user.line_of_business_id);
+    }
+    
+          sql.query(query, params, (err, rows) => {
       if (err) {
         console.log("error: ", err);
         return res.status(500).send(`There was a problem finding the Work Request. ${err}`);
@@ -118,9 +140,16 @@ const create = (req, res) => {
   }
   
   console.log("workRequestDatas: ", req.body);
+  // Set line of business based on user role
+  let lineOfBusinessId = req.body.line_of_business_id;
+  if (req.user.role !== 'administrator') {
+    lineOfBusinessId = req.user.line_of_business_id;
+  }
+  
   const workRequestData = {
     title: req.body.title,
     service_line_id: req.body.service_line_id,
+    line_of_business_id: lineOfBusinessId,
     project_id: req.body.project_id,
     duration_from: req.body.duration_from,
     duration_to: req.body.duration_to,
@@ -211,10 +240,17 @@ const update = (req, res) => {
   console.log("Parsed capabilityAreaIds:", capabilityAreaIds);
   console.log("Parsed resourceIds:", resourceIds);
   
+  // Set line of business based on user role
+  let lineOfBusinessId = updatedWorkRequest.line_of_business_id;
+  if (req.user.role !== 'administrator') {
+    lineOfBusinessId = req.user.line_of_business_id;
+  }
+  
   // Only update fields that exist in the work_request table
   const workRequestData = {
     title: updatedWorkRequest.title,
     service_line_id: updatedWorkRequest.service_line_id,
+    line_of_business_id: lineOfBusinessId,
     project_id: updatedWorkRequest.project_id,
     duration_from: updatedWorkRequest.duration_from,
     duration_to: updatedWorkRequest.duration_to,
@@ -327,7 +363,6 @@ const getResourcesByCapabilityAreas = (req, res) => {
   
   // First get the capability area names
   const capabilityAreaQuery = `SELECT id, name FROM capability_area WHERE id IN (${capabilityAreaIds.map(() => '?').join(',')})`;
-  console.log("capabilityAreaQuery: ", capabilityAreaQuery);
   sql.query(capabilityAreaQuery, capabilityAreaIds, (err, capabilityAreas) => {
     if (err) {
       console.log("Error fetching capability areas:", err);
@@ -340,17 +375,25 @@ const getResourcesByCapabilityAreas = (req, res) => {
 
     const capabilityAreaNames = capabilityAreas.map(ca => ca.name);
     
-    const whereConditions = capabilityAreaNames.map(name => 
-      `(
-        ed.primary_skills LIKE ? OR 
-        ed.secondary_skills LIKE ?
-      )`
+    
+    const capabilityConditions = capabilityAreaNames.map(name => 
+      `(ed.primary_skills LIKE ? OR ed.secondary_skills LIKE ?)`
     ).join(' OR ');
     
+    
+    let whereConditions = [];
+    if (capabilityConditions) {
+      whereConditions.push(`(${capabilityConditions})`);
+    }
+
+    if (req.user.role !== 'administrator') {
+      whereConditions.push(`ed.line_of_business_id = ${req.user.line_of_business_id}`);
+    }
+
     const query = `
       SELECT DISTINCT ed.* 
       FROM employee_details ed
-      WHERE ${whereConditions}
+      WHERE ${whereConditions.join(' AND ')}
       ORDER BY ed.first_name, ed.last_name
     `;
 
@@ -371,11 +414,40 @@ const getResourcesByCapabilityAreas = (req, res) => {
   });
 };
 
+const getCapabilityAreasByLineOfBusiness = (req, res) => {
+  if (!userACL.hasWorkRequestReadAccess(req.user.role)) {
+    const msg = `User role '${req.user.role}' does not have privileges on this action`;
+    return res.status(404).send({error: true, message: msg});
+  }
+  
+  const lineOfBusinessId = req.params.lineOfBusinessId;
+  if (!lineOfBusinessId) {
+    return res.status(400).send({error: true, message: "Line of Business ID is required"});
+  }
+  
+  const query = `
+    SELECT ca.*, sl.name as service_line_name
+    FROM capability_area ca
+    LEFT JOIN service_line sl ON ca.service_line_id = sl.id
+    WHERE ca.line_of_business_id = ?
+    ORDER BY ca.name
+  `;
+  
+  sql.query(query, [lineOfBusinessId], (err, rows) => {
+    if (err) {
+      console.log("error: ", err);
+      return res.status(500).send(`There was a problem getting capability areas for line of business. ${err}`);
+    }
+    return res.status(200).send({capabilityAreas: rows, user: req.user});
+  });
+};
+
 module.exports = {
   findAll,
   findById,
   create,
   update,
   erase,
-  getResourcesByCapabilityAreas
+  getResourcesByCapabilityAreas,
+  getCapabilityAreasByLineOfBusiness
 } 

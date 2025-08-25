@@ -1,0 +1,1 @@
+INSERT INTO `user_roles` (`role`, `role_description`) VALUES ('usconsultant', 'US Consultant'), ('offshorelead', 'Offshore Lead'), ('leadership', 'Leadership');

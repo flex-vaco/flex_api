@@ -3,7 +3,7 @@ const officeLocationTable = "office_locations";
 const userACL = require('../lib/userACL.js');
 
 const findAll = (req, res) => {
-  if (!userACL.hasLocationAccess(req.user.role)) {
+  if (!userACL.hasLocationReadAccess(req.user.role)) {
     const msg = `User role '${req.user.role}' does not have privileges on this action`;
     return res.status(404).send({error: true, message: msg});
   }
@@ -19,7 +19,7 @@ const findAll = (req, res) => {
 };
 
 const findById = (req, res) => {
-  if (!userACL.hasLocationAccess(req.user.role)) {
+  if (!userACL.hasLocationReadAccess(req.user.role)) {
     const msg = `User role '${req.user.role}' does not have privileges on this action`;
     return res.status(404).send({error: true, message: msg});
   }

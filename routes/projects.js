@@ -8,6 +8,7 @@ const verifyToken = require('../lib/verifyJWToken.js');
 router.use(bodyParser.urlencoded({ extended: true }));
 
 router.get("/", verifyToken, Project.findAll);
+router.get("/lineOfBusiness/:lineOfBusinessId", verifyToken, Project.findByLineOfBusiness);
 router.get("/:project_id", verifyToken, Project.findById);
 router.post("/add", verifyToken, Project.create);
 router.post("/update/:project_id", verifyToken, Project.update);
