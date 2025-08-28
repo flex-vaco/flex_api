@@ -429,7 +429,7 @@ const importTimesheet = (req, res) => {
         if (result.affectedRows > 0) {
           insertedCount++;
         } else {
-          console.log("Bulk Timesheet entry Skipped: ", insertSql )
+          // console.log("Bulk Timesheet entry Skipped: ", insertSql )
           skippedCount++;
         }
 
