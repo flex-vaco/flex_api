@@ -1,6 +1,11 @@
 -- Below statements are added for converting to multi-tenant with Line_Of_Business as the base table for each tenant
 ALTER TABLE `line_of_business` CHANGE `id` `line_of_business_id` int(10) unsigned NOT NULL AUTO_INCREMENT;
 
+ALTER TABLE `line_of_business` 
+  ADD COLUMN `location` varchar(100) NOT NULL, 
+  ADD COLUMN `contact_person` varchar(100) NOT NULL, 
+  ADD COLUMN `contact_email`  varchar(100) NOT NULL;
+
 CREATE TABLE `service_line` (
   `service_line_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
