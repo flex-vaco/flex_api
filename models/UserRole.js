@@ -12,7 +12,7 @@ const findAll = (req, res) => {
   let query = `
     SELECT ur.*, lb.name as line_of_business_name 
     FROM ${userRolesTable} ur 
-    LEFT JOIN line_of_business lb ON ur.line_of_business_id = lb.id
+    LEFT JOIN line_of_business lb ON ur.line_of_business_id = lb.line_of_business_id
   `;
   let whereConditions = [];
   
@@ -46,7 +46,7 @@ const findById = (req, res) => {
     const query = `
       SELECT ur.*, lb.name as line_of_business_name 
       FROM ${userRolesTable} ur 
-      LEFT JOIN line_of_business lb ON ur.line_of_business_id = lb.id
+      LEFT JOIN line_of_business lb ON ur.line_of_business_id = lb.line_of_business_id
       WHERE ur.role_id = ?
     `;
     sql.query(query, [roleId], (err, rows) => {
@@ -73,7 +73,7 @@ const findByLineOfBusiness = (req, res) => {
     const query = `
       SELECT ur.*, lb.name as line_of_business_name 
       FROM ${userRolesTable} ur 
-      LEFT JOIN line_of_business lb ON ur.line_of_business_id = lb.id
+      LEFT JOIN line_of_business lb ON ur.line_of_business_id = lb.line_of_business_id
       WHERE ur.line_of_business_id = ?
       ORDER BY ur.role
     `;

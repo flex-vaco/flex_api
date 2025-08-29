@@ -6,7 +6,7 @@ CREATE TABLE `service_line` (
   `name` varchar(255) NOT NULL,
   `description` text NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`service_line_id`),
+  PRIMARY KEY (`service_line_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
 
 CREATE TABLE `capability_area` (
@@ -26,7 +26,7 @@ ALTER TABLE `service_line`
 ADD CONSTRAINT `fk_service_line_line_of_business` 
 FOREIGN KEY (`line_of_business_id`) REFERENCES `line_of_business`(`line_of_business_id`) ON DELETE CASCADE;
 
---UPDATE `service_line` SET `line_of_business_id` = 0 WHERE `line_of_business_id` = 1 OR `line_of_business_id` IS NULL;
+-- UPDATE `service_line` SET `line_of_business_id` = 0 WHERE `line_of_business_id` = 1 OR `line_of_business_id` IS NULL;
 
 ALTER TABLE `service_line` 
 MODIFY COLUMN `line_of_business_id` int(10) unsigned NOT NULL;
@@ -39,7 +39,7 @@ ALTER TABLE `capability_area`
 ADD CONSTRAINT `fk_capability_area_line_of_business` 
 FOREIGN KEY (`line_of_business_id`) REFERENCES `line_of_business`(`line_of_business_id`) ON DELETE CASCADE;
 
---UPDATE `capability_area` SET `line_of_business_id` = 1 WHERE `line_of_business_id` = 0 OR `line_of_business_id` IS NULL;
+-- UPDATE `capability_area` SET `line_of_business_id` = 1 WHERE `line_of_business_id` = 0 OR `line_of_business_id` IS NULL;
 
 
 ALTER TABLE `capability_area` 
@@ -144,4 +144,34 @@ ON DELETE RESTRICT ON UPDATE CASCADE;
 CREATE INDEX `idx_users_line_of_business_id` ON `users` (`line_of_business_id`);
 CREATE INDEX `idx_project_details_line_of_business_id` ON `project_details` (`line_of_business_id`);
 CREATE INDEX `idx_employee_details_line_of_business_id` ON `employee_details` (`line_of_business_id`);
+
+CREATE TABLE `offshore_lead_service_lines` (
+    `offshore_lead_service_line_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+    `offshore_lead_id` int(10) unsigned NOT NULL,
+    `service_line_id` int(10) unsigned NOT NULL,
+    `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`offshore_lead_service_line_id`),
+    UNIQUE KEY `uidx_offshore_lead_service_line` (`offshore_lead_id`,`service_line_id`),
+    KEY `service_line_offshore_lead_service_lines_fk` (`service_line_id`),
+    CONSTRAINT `service_line_offshore_lead_service_lines_fk` FOREIGN KEY (`service_line_id`) REFERENCES `service_line` (`service_line_id`) 
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT `users_offshore_lead_service_lines_fk` FOREIGN KEY (`offshore_lead_id`) REFERENCES `users` (`user_id`) 
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+
+-- Create table for work request offshore leads assignment
+CREATE TABLE `work_request_offshore_leads` (
+    `work_request_offshore_lead_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+    `work_request_id` int(10) unsigned NOT NULL,
+    `offshore_lead_id` int(10) unsigned NOT NULL,
+    `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`work_request_offshore_lead_id`),
+    UNIQUE KEY `uidx_work_request_offshore_lead` (`work_request_id`,`offshore_lead_id`),
+    KEY `work_request_offshore_leads_fk` (`work_request_id`),
+    KEY `users_work_request_offshore_leads_fk` (`offshore_lead_id`),
+    CONSTRAINT `work_request_offshore_leads_fk` FOREIGN KEY (`work_request_id`) REFERENCES `work_request` (`work_request_id`) 
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT `users_work_request_offshore_leads_fk` FOREIGN KEY (`offshore_lead_id`) REFERENCES `users` (`user_id`) 
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
 

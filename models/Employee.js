@@ -5,8 +5,8 @@ const path = require('path');
 const userACL = require('../lib/userACL.js');
 const empProjAlloc = "employee_project_allocations";
 
-const findAll = (req, res) => { // filters by name if params are given
-  if (!userACL.hasEmployeeReadAccess(req.user.role)) {
+const findAll = (req, res) => { 
+  if (!userACL.hasEmployeeReadAccess(req.user.role) && !userACL.hasOffshoreLeadEmployeeAccess(req.user.role)) {
     const msg = `User role '${req.user.role}' does not have privileges on this action`;
     return res.status(404).send({error: true, message: msg});
   }
@@ -40,7 +40,7 @@ const findAll = (req, res) => { // filters by name if params are given
 };
 
 const findById = (req, res) => {
-  if (!userACL.hasEmployeeReadAccess(req.user.role)) {
+  if (!userACL.hasEmployeeReadAccess(req.user.role) && !userACL.hasOffshoreLeadEmployeeAccess(req.user.role)) {
     const msg = `User role '${req.user.role}' does not have privileges on this action`;
     return res.status(404).send({error: true, message: msg});
   }
@@ -62,7 +62,7 @@ const findById = (req, res) => {
 
 
 const search = (req, res) => {
-  if (!userACL.hasEmployeeReadAccess(req.user.role)) {
+  if (!userACL.hasEmployeeReadAccess(req.user.role) && !userACL.hasOffshoreLeadEmployeeAccess(req.user.role)) {
     const msg = `User role '${req.user.role}' does not have privileges on this action`;
     return res.status(404).send({error: true, message: msg});
   }
@@ -134,7 +134,7 @@ const search = (req, res) => {
 };
 
 const create = (req, res) => {
-  if (!userACL.hasEmployeeCreateAccess(req.user.role)) {
+  if (!userACL.hasEmployeeCreateAccess(req.user.role) && !userACL.hasOffshoreLeadEmployeeAccess(req.user.role)) {
     const msg = `User role '${req.user.role}' does not have privileges on this action`;
     return res.status(404).send({error: true, message: msg});
   }
@@ -184,7 +184,7 @@ const create = (req, res) => {
 };
 
 const update = (req, res) => {
-  if (!userACL.hasEmployeeUpdateAccess(req.user.role)) {
+  if (!userACL.hasEmployeeUpdateAccess(req.user.role) && !userACL.hasOffshoreLeadEmployeeAccess(req.user.role)) {
     const msg = `User role '${req.user.role}' does not have privileges on this action`;
     return res.status(404).send({ error: true, message: msg });
   }
@@ -254,7 +254,7 @@ const update = (req, res) => {
 };
 
 const erase = (req, res) => {
-  if (!userACL.hasEmployeeDeleteAccess(req.user.role)) {
+  if (!userACL.hasEmployeeDeleteAccess(req.user.role) && !userACL.hasOffshoreLeadEmployeeAccess(req.user.role)) {
     const msg = `User role '${req.user.role}' does not have privileges on this action`;
     return res.status(404).send({error: true, message: msg});
   }
