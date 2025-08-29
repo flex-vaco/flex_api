@@ -56,7 +56,7 @@ CREATE TABLE `work_request` (
   `hours_per_week` int(3) NOT NULL,
   `notes` text NULL,
   `project_attachment` varchar(500) NULL,
-  `status` enum('draft', 'submitted', 'approved', 'rejected', 'in_progress', 'completed') DEFAULT 'draft',
+  `status` enum('draft', 'submitted', 'approved', 'rejected') DEFAULT 'draft',
   `submitted_by` int(10) unsigned NOT NULL,
   `submitted_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,

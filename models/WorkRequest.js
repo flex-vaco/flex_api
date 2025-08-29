@@ -582,7 +582,7 @@ const getWorkRequestsByOffshoreLead = (req, res) => {
     LEFT JOIN ${workRequestResourcesTable} wrr ON wr.work_request_id = wrr.work_request_id
     LEFT JOIN employee_details ed ON wrr.employee_id = ed.emp_id
     INNER JOIN ${workRequestOffshoreLeadsTable} wrol ON wr.work_request_id = wrol.work_request_id
-    WHERE wrol.offshore_lead_id = ? AND wr.line_of_business_id = ?
+    WHERE wrol.offshore_lead_id = ? AND wr.line_of_business_id = ? AND wr.status != 'draft'
     GROUP BY wr.work_request_id
     ORDER BY wr.created_at DESC
   `;
@@ -745,6 +745,66 @@ const updateWorkRequestStatus = (req, res) => {
   });
 };
 
+// Submit work request (draft to submitted)
+const submitWorkRequest = (req, res) => {
+  if (!userACL.hasWorkRequestCreateAccess(req.user.role)) {
+    const msg = `User role '${req.user.role}' does not have privileges on this action`;
+    return res.status(404).send({error: true, message: msg});
+  }
+  
+  const { id } = req.params;
+  
+  if (!id) {
+    return res.status(500).send('Work Request ID is Required');
+  }
+  
+  // Verify that the user is the creator of this work request and it's in draft status
+  const verifyQuery = `
+    SELECT wr.* FROM ${workRequestTable} wr
+    WHERE wr.work_request_id = ? AND wr.submitted_by = ? AND wr.status = 'draft'
+  `;
+  
+  sql.query(verifyQuery, [id, req.user.user_id], (err, rows) => {
+    if (err) {
+      console.log("error: ", err);
+      return res.status(500).send(`There was a problem verifying work request access. ${err}`);
+    }
+    
+    if (rows.length === 0) {
+      return res.status(404).send({error: true, message: "Work Request not found, not in draft status, or you don't have permission to submit it"});
+    }
+    
+    const workRequest = rows[0];
+    
+    // Update work request status to submitted
+    const updateData = { 
+      status: 'submitted',
+      submitted_at: new Date()
+    };
+    
+    const updateQuery = `UPDATE ${workRequestTable} SET ? WHERE work_request_id = ?`;
+    sql.query(updateQuery, [updateData, id], (err, success) => {
+      if (err) {
+        console.log("error: ", err);
+        return res.status(500).send(`Problem while submitting the work request. ${err}`);
+      }
+      
+      if (success.affectedRows === 1) {
+        const response = {
+          message: 'Work request submitted successfully',
+          workRequestId: id,
+          status: 'submitted',
+          user: req.user
+        };
+        
+        res.status(200).send(response);
+      } else {
+        res.status(404).send(`Record not found with Work Request ID: ${id}`);
+      }
+    });
+  });
+};
+
 module.exports = {
   findAll,
   findById,
@@ -756,5 +816,6 @@ module.exports = {
   getOffshoreLeadsByServiceLine,
   getWorkRequestsByOffshoreLead,
   getFilteredResourcesForOffshoreLead,
-  updateWorkRequestStatus
+  updateWorkRequestStatus,
+  submitWorkRequest
 } 

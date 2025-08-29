@@ -20,7 +20,7 @@ CREATE TABLE imported_timesheet_entries (
     -- Foreign key constraint
     CONSTRAINT fk_line_of_business
         FOREIGN KEY (`line_of_business_id`)
-        REFERENCES line_of_business(`id`)
+        REFERENCES line_of_business(`line_of_business_id`)
         ON DELETE RESTRICT
         ON UPDATE CASCADE
 );

@@ -22,4 +22,7 @@ router.get("/offshoreLead/assigned", verifyToken, WorkRequest.getWorkRequestsByO
 router.post("/offshoreLead/filteredResources", verifyToken, WorkRequest.getFilteredResourcesForOffshoreLead);
 router.post("/offshoreLead/updateStatus/:id", verifyToken, WorkRequest.updateWorkRequestStatus);
 
+// Submit work request (draft to submitted)
+router.post("/submit/:id", verifyToken, WorkRequest.submitWorkRequest);
+
 module.exports = router; 
